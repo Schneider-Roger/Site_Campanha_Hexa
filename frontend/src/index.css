@@ -1,0 +1,116 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+
+@import "tailwindcss";
+
+@theme {
+  --color-hexa-yellow: #FEDD00;
+  --color-hexa-green: #004B23;
+  --color-hexa-dark-green: #00361a;
+  --color-hexa-white: #FFFFFF;
+
+  --font-outfit: "Outfit", sans-serif;
+
+  --animate-fade-in: fadeIn 0.5s ease-out forwards;
+  --animate-slide-up: slideUp 0.5s ease-out forwards;
+
+  @keyframes fadeIn {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+  @keyframes slideUp {
+    0% { transform: translateY(20px); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
+  }
+}
+
+:root {
+  font-family: 'Outfit', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light;
+  color: #004B23;
+  background-color: #FEDD00;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background-color: #FEDD00;
+  /* Premium Athletic Racing stripe background with subtle radial glows */
+  background-image: 
+    radial-gradient(at 10% 20%, rgba(255, 255, 255, 0.4) 0px, transparent 50%),
+    radial-gradient(at 90% 80%, rgba(0, 75, 35, 0.05) 0px, transparent 50%),
+    repeating-linear-gradient(45deg, rgba(0, 75, 35, 0.015) 0px, rgba(0, 75, 35, 0.015) 3px, transparent 3px, transparent 30px);
+  overflow-x: hidden;
+}
+
+#root {
+  width: 100%;
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.95);
+  border: 3px solid #004B23;
+  box-shadow: 0 20px 40px rgba(0, 75, 35, 0.15);
+}
+
+.hexa-gradient {
+  background: linear-gradient(135deg, #004B23 0%, #00361a 100%);
+}
+
+/* Beautiful dynamic input defaults */
+input, select {
+  background: #FFFFFF !important;
+  border: 2.5px solid #004B23 !important;
+  color: #004B23 !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 12px !important; /* Premium rounded-xl inputs */
+  font-weight: 600;
+}
+
+input:focus, select:focus {
+  border-color: #004B23 !important;
+  box-shadow: 0 0 0 4px rgba(0, 75, 35, 0.15), 0 4px 10px rgba(0, 75, 35, 0.08) !important;
+  transform: translateY(-1px);
+  outline: none;
+}
+
+label {
+  color: #004B23;
+  font-size: 0.85rem;
+  font-weight: 800;
+  margin-bottom: 0.35rem;
+  display: block;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+button.primary {
+  background: linear-gradient(135deg, #004B23 0%, #00361a 100%);
+  color: #FEDD00;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 16px;
+  box-shadow: 0 8px 20px rgba(0, 75, 35, 0.2);
+  border: 2px solid rgba(254, 221, 0, 0.2);
+}
+
+button.primary:hover {
+  background: linear-gradient(135deg, #005f2c 0%, #004B23 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(0, 75, 35, 0.3);
+  border-color: rgba(254, 221, 0, 0.4);
+}
+
+button.primary:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 10px rgba(0, 75, 35, 0.2);
+}

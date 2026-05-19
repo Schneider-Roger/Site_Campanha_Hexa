@@ -1,0 +1,26 @@
+# Node modules
+node_modules/
+**/node_modules/
+
+# Environment files
+.env
+**/.env
+
+# Production build artifacts
+dist/
+build/
+out/
+.next/
+
+# Local configuration and logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.DS_Store
+Thumbs.db
+
+# Workspace settings
+.brief/
+.vscode/
+.idea/
