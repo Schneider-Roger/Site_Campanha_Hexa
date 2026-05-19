@@ -36,6 +36,12 @@ const Admin = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  // Authentication states
+  const [adminToken, setAdminToken] = useState(localStorage.getItem('copercana_admin_token') || '');
+  const [isAuthorized, setIsAuthorized] = useState(!!adminToken);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [authError, setAuthError] = useState('');
+
   // Result submission form
   const [scoringGame, setScoringGame] = useState(null);
   const [scoreForm, setScoreForm] = useState({
@@ -44,16 +50,24 @@ const Admin = () => {
     primeiro_gol_real: ''
   });
 
-  const fetchData = async () => {
+  const fetchData = async (tokenToUse = adminToken) => {
+    if (!tokenToUse) {
+      setIsAuthorized(false);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError('');
+    setAuthError('');
     try {
+      const config = { headers: { 'x-admin-token': tokenToUse } };
       const [jogosRes, partRes] = await Promise.all([
-        axios.get('http://localhost:3001/api/admin/jogos'),
-        axios.get('http://localhost:3001/api/admin/participantes')
+        axios.get('http://localhost:3001/api/admin/jogos', config),
+        axios.get('http://localhost:3001/api/admin/participantes', config)
       ]);
       setJogos(jogosRes.data);
       setParticipantes(partRes.data);
+      setIsAuthorized(true);
       
       // Auto-select first game for convenience
       if (jogosRes.data.length > 0 && selectedGameId === 'todos') {
@@ -61,15 +75,43 @@ const Admin = () => {
       }
     } catch (err) {
       console.error('Error fetching admin data:', err);
-      setError('Erro ao carregar dados do painel administrativo.');
+      if (err.response && err.response.status === 401) {
+        setAuthError('Senha de acesso incorreta ou token inválido.');
+        setIsAuthorized(false);
+        localStorage.removeItem('copercana_admin_token');
+      } else {
+        setError('Erro ao carregar dados do painel administrativo.');
+      }
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData();
+    if (adminToken) {
+      fetchData(adminToken);
+    } else {
+      setLoading(false);
+    }
   }, []);
+
+  const handleLogin = (e) => {
+    e.preventDefault();
+    if (!passwordInput.trim()) {
+      setAuthError('A senha não pode estar vazia.');
+      return;
+    }
+    setAdminToken(passwordInput);
+    localStorage.setItem('copercana_admin_token', passwordInput);
+    fetchData(passwordInput);
+  };
+
+  const handleLogout = () => {
+    setAdminToken('');
+    setIsAuthorized(false);
+    localStorage.removeItem('copercana_admin_token');
+    window.location.reload();
+  };
 
   // Fetch results automatically from mock scraper
   const handleAutoPull = async (jogoId) => {
@@ -77,7 +119,8 @@ const Admin = () => {
     setError('');
     setSuccess('');
     try {
-      const response = await axios.get(`http://localhost:3001/api/admin/jogo/puxar-resultado/${jogoId}`);
+      const config = { headers: { 'x-admin-token': adminToken } };
+      const response = await axios.get(`http://localhost:3001/api/admin/jogo/puxar-resultado/${jogoId}`, config);
       if (response.data.success) {
         setScoreForm({
           placar_real_brasil: response.data.placar_real_brasil,
@@ -87,7 +130,11 @@ const Admin = () => {
         setSuccess(response.data.message);
       }
     } catch (err) {
-      setError('Não foi possível obter o resultado do jogo automaticamente.');
+      if (err.response && err.response.status === 401) {
+        handleLogout();
+      } else {
+        setError('Não foi possível obter o resultado do jogo automaticamente.');
+      }
     } finally {
       setActionLoading(false);
     }
@@ -102,12 +149,17 @@ const Admin = () => {
     setError('');
     setSuccess('');
     try {
-      await axios.post(`http://localhost:3001/api/admin/jogos/${scoringGame.id}/resultado`, scoreForm);
+      const config = { headers: { 'x-admin-token': adminToken } };
+      await axios.post(`http://localhost:3001/api/admin/jogos/${scoringGame.id}/resultado`, scoreForm, config);
       setSuccess('Resultado salvo com sucesso! Os palpites foram apurados.');
       setScoringGame(null);
       await fetchData(); // Reload calculations
     } catch (err) {
-      setError('Erro ao salvar resultado da partida.');
+      if (err.response && err.response.status === 401) {
+        handleLogout();
+      } else {
+        setError('Erro ao salvar resultado da partida.');
+      }
     } finally {
       setActionLoading(false);
     }
@@ -121,11 +173,16 @@ const Admin = () => {
     setError('');
     setSuccess('');
     try {
-      await axios.post(`http://localhost:3001/api/admin/jogos/${jogoId}/reset`);
+      const config = { headers: { 'x-admin-token': adminToken } };
+      await axios.post(`http://localhost:3001/api/admin/jogos/${jogoId}/reset`, null, config);
       setSuccess('Jogo reaberto para palpites com sucesso!');
       await fetchData();
     } catch (err) {
-      setError('Erro ao reabrir jogo.');
+      if (err.response && err.response.status === 401) {
+        handleLogout();
+      } else {
+        setError('Erro ao reabrir jogo.');
+      }
     } finally {
       setActionLoading(false);
     }
@@ -224,6 +281,78 @@ const Admin = () => {
 
   const stats = getStats();
 
+  if (!isAuthorized) {
+    return (
+      <div className="min-h-screen bg-hexa-yellow relative overflow-hidden flex flex-col items-center justify-center font-outfit p-4 select-none">
+        {/* Decorative background images */}
+        <div className="absolute top-[10%] left-[-5%] sm:left-[-2%] opacity-20 w-32 sm:w-48 md:w-56 pointer-events-none">
+          <img src="/camisa-10.png" alt="" className="rotate-[-12deg]" />
+        </div>
+        <div className="absolute bottom-[10%] right-[-5%] sm:right-[-2%] opacity-20 w-32 sm:w-48 md:w-56 pointer-events-none">
+          <img src="/chuteira.png" alt="" className="rotate-[15deg]" />
+        </div>
+
+        <motion.div 
+          initial={{ scale: 0.95, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="bg-white p-6 sm:p-10 rounded-3xl border-4 border-hexa-green shadow-[8px_8px_0px_#001D0E] max-w-md w-full z-10 text-center"
+        >
+          <div className="bg-hexa-green text-hexa-yellow p-4 w-16 h-16 rounded-2xl shadow-md mx-auto mb-6 flex items-center justify-center border border-white/20">
+            <Trophy className="w-8 h-8" />
+          </div>
+
+          <h1 className="text-2xl sm:text-3xl font-black uppercase italic text-hexa-green mb-2 tracking-tighter leading-none font-outfit">
+            Central de Apuração
+          </h1>
+          <p className="text-xs font-bold text-hexa-green/70 uppercase tracking-wider mb-8">
+            Área de Acesso Restrito • Copercana
+          </p>
+
+          <form onSubmit={handleLogin} className="space-y-6 text-left">
+            <div className="space-y-2">
+              <label className="text-xs font-black uppercase block text-hexa-green">Senha de Acesso:</label>
+              <input 
+                required
+                type="password"
+                placeholder="Insira a senha do administrador..."
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                className="w-full p-4 border-2 border-hexa-green bg-white rounded-xl font-black shadow-inner text-center focus:outline-none focus:ring-3 focus:ring-hexa-yellow text-lg"
+              />
+            </div>
+
+            {authError && (
+              <p className="text-xs font-black text-rose-600 bg-rose-50 border-2 border-rose-200 rounded-xl p-3 text-center uppercase tracking-wide">
+                ⚠️ {authError}
+              </p>
+            )}
+
+            <div className="flex gap-3">
+              <a 
+                href="/"
+                onClick={(e) => {
+                  e.preventDefault();
+                  window.history.pushState(null, '', '/');
+                }}
+                className="bg-white border-2 border-hexa-green text-hexa-green hover:bg-hexa-green/5 py-4 px-6 rounded-xl font-black text-xs uppercase italic flex items-center justify-center gap-1.5 flex-1 transition-all"
+              >
+                <ArrowLeft className="w-4 h-4" /> Voltar
+              </a>
+
+              <button
+                type="submit"
+                className="bg-hexa-green text-hexa-yellow hover:bg-hexa-dark-green py-4 px-6 rounded-xl font-black text-xs uppercase italic flex items-center justify-center gap-1.5 flex-1 shadow-md transition-all border-2 border-hexa-green"
+              >
+                <span>Entrar</span>
+                <ArrowUpRight className="w-4 h-4 animate-pulse" />
+              </button>
+            </div>
+          </form>
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-hexa-yellow relative overflow-hidden flex flex-col font-outfit">
       {/* Header Navbar (100px) */}
@@ -278,17 +407,27 @@ const Admin = () => {
             </div>
           </div>
           
-          <a 
-            href="/"
-            onClick={(e) => {
-              e.preventDefault();
-              window.history.pushState(null, '', '/');
-            }}
-            className="bg-white border-2 border-hexa-green text-hexa-green hover:bg-hexa-green hover:text-hexa-yellow px-5 py-2.5 rounded-xl font-bold transition-all shadow-sm flex items-center gap-2"
-          >
-            <ArrowLeft className="w-5 h-5" /> Voltar para o Site
-          </a>
+          <div className="flex gap-3">
+            <a 
+              href="/"
+              onClick={(e) => {
+                e.preventDefault();
+                window.history.pushState(null, '', '/');
+              }}
+              className="bg-white border-2 border-hexa-green text-hexa-green hover:bg-hexa-green hover:text-hexa-yellow px-5 py-2.5 rounded-xl font-bold transition-all shadow-sm flex items-center gap-2"
+            >
+              <ArrowLeft className="w-5 h-5" /> Voltar para o Site
+            </a>
+            
+            <button
+              onClick={handleLogout}
+              className="bg-rose-600 text-white hover:bg-rose-700 px-5 py-2.5 rounded-xl font-bold transition-all shadow-sm border-2 border-rose-600 flex items-center gap-1.5"
+            >
+              Sair
+            </button>
+          </div>
         </header>
+
 
       {/* Main feedback messages */}
       <AnimatePresence>

@@ -11,6 +11,18 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
+// Middleware to authenticate admin requests via header or query token
+const authenticateAdmin = (req, res, next) => {
+    const adminToken = req.headers['x-admin-token'] || req.query.token;
+    const expectedToken = process.env.ADMIN_TOKEN || 'copercana2026';
+    
+    if (adminToken === expectedToken) {
+        next();
+    } else {
+        res.status(401).json({ error: 'Acesso administrativo não autorizado. Token inválido.' });
+    }
+};
+
 const dbConfig = {
     host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'root',
@@ -298,7 +310,7 @@ app.post('/api/participar', (req, res) => {
 // ADMIN ENDPOINTS
 
 // Get all matches
-app.get('/api/admin/jogos', (req, res) => {
+app.get('/api/admin/jogos', authenticateAdmin, (req, res) => {
     const db = app.get('db');
     if (!db) return res.status(500).json({ error: 'Banco de dados não inicializado.' });
 
@@ -312,7 +324,7 @@ app.get('/api/admin/jogos', (req, res) => {
 });
 
 // Update game real results and end it
-app.post('/api/admin/jogos/:id/resultado', (req, res) => {
+app.post('/api/admin/jogos/:id/resultado', authenticateAdmin, (req, res) => {
     const db = app.get('db');
     if (!db) return res.status(500).json({ error: 'Banco de dados não inicializado.' });
     
@@ -330,7 +342,7 @@ app.post('/api/admin/jogos/:id/resultado', (req, res) => {
 });
 
 // Reset game back to agendado
-app.post('/api/admin/jogos/:id/reset', (req, res) => {
+app.post('/api/admin/jogos/:id/reset', authenticateAdmin, (req, res) => {
     const db = app.get('db');
     if (!db) return res.status(500).json({ error: 'Banco de dados não inicializado.' });
     
@@ -346,7 +358,7 @@ app.post('/api/admin/jogos/:id/reset', (req, res) => {
 });
 
 // Get all guesses with winner status calculated
-app.get('/api/admin/participantes', (req, res) => {
+app.get('/api/admin/participantes', authenticateAdmin, (req, res) => {
     const db = app.get('db');
     if (!db) return res.status(500).json({ error: 'Banco de dados não inicializado.' });
 
@@ -437,7 +449,7 @@ async function scrapeGEResult(adversario) {
 }
 
 // Pull results automatically (Connects to Globo Esporte scraper with secure mock fallback for tests)
-app.get('/api/admin/jogo/puxar-resultado/:id', (req, res) => {
+app.get('/api/admin/jogo/puxar-resultado/:id', authenticateAdmin, (req, res) => {
     const db = app.get('db');
     if (!db) return res.status(500).json({ error: 'Banco de dados não inicializado.' });
     
